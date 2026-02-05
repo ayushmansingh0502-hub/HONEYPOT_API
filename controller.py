@@ -7,8 +7,15 @@ from honeypot_brain import honeypot_reply_for_phase
 from scoring import compute_risk_score
 from fingerprint import analyze_attacker
 
-def handle_message(conversation_id: str, message: str, ip: str, user_agent: str) -> ScamAnalysisResponse:
-    # Load or initialize conversation state
+
+def handle_message(
+    conversation_id: str,
+    message: str,
+    ip: str | None = None,
+    user_agent: str | None = None
+) -> ScamAnalysisResponse:
+
+    # 1️⃣ Load or initialize conversation state
     state = get_conversation(conversation_id)
 
     if not state:
@@ -17,9 +24,14 @@ def handle_message(conversation_id: str, message: str, ip: str, user_agent: str)
             "messages": []
         }
 
-    current_phase: ScamPhase = state["phase"]
-    history = state["messages"]
+    # 🔒 ENUM-SAFE PHASE HANDLING (CRITICAL FIX)
+    raw_phase = state.get("phase", ScamPhase.INITIAL)
+    if isinstance(raw_phase, ScamPhase):
+        current_phase = raw_phase
+    else:
+        current_phase = ScamPhase(raw_phase)
 
+    history = state.get("messages", [])
 
     # 2️⃣ Save scammer message
     history.append({
@@ -31,6 +43,7 @@ def handle_message(conversation_id: str, message: str, ip: str, user_agent: str)
     scammer_text = " ".join(
         m["content"] for m in history if m["role"] == "scammer"
     )
+
     detection = detect_scam(scammer_text)
     intelligence = None
 
@@ -40,17 +53,17 @@ def handle_message(conversation_id: str, message: str, ip: str, user_agent: str)
     else:
         new_phase = current_phase
 
-    # 4️⃣ Generate honeypot reply (rule-based brain)
+    # 4️⃣ Generate honeypot reply
     reply = honeypot_reply_for_phase(new_phase)
 
-    # 🔍 Build attacker fingerprint
+    # 5️⃣ Build attacker fingerprint (GUVI-safe defaults)
     fingerprint = analyze_attacker(
         history=history,
-        ip=ip,
-        user_agent=user_agent
+        ip=ip or "unknown",
+        user_agent=user_agent or "unknown"
     )
 
-    # 📊 Risk scoring
+    # 6️⃣ Risk scoring
     risk = compute_risk_score(
         detection=detection,
         fingerprint=fingerprint,
@@ -58,13 +71,13 @@ def handle_message(conversation_id: str, message: str, ip: str, user_agent: str)
         intelligence=intelligence
     )
 
-    # 5️⃣ Save honeypot reply
+    # 7️⃣ Save honeypot reply
     history.append({
         "role": "honeypot",
         "content": reply
     })
 
-    # 6️⃣ Persist updated conversation
+    # 8️⃣ Persist updated conversation
     save_conversation(
         conversation_id,
         {
@@ -73,7 +86,7 @@ def handle_message(conversation_id: str, message: str, ip: str, user_agent: str)
         }
     )
 
-    # 7️⃣ Return API response
+    # 9️⃣ Return API response
     return ScamAnalysisResponse(
         is_scam=detection.is_scam,
         scam_type="upi_fraud" if detection.is_scam else None,
