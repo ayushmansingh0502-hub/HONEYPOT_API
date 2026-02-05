@@ -2,8 +2,8 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
 class MessageRequest(BaseModel):
-    conversation_id: str
-    message: str
+    conversation_id: Optional[str] = "guvi_test"
+    message: Optional[str] = "ping"
 
 class ExtractedIntelligence(BaseModel):
     upi_ids: List[str] = Field(default_factory=list)
