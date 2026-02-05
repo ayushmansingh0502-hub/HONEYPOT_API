@@ -16,15 +16,15 @@ def verify_api_key(api_key: str = Depends(api_key_header)):
 @app.post("/honeypot", response_model=ScamAnalysisResponse)
 def honeypot(
     api_key: str = Depends(verify_api_key),
-    request: Optional[dict] = None   # 👈 THIS IS THE KEY CHANGE
+    request: Optional[dict] = None
 ):
-    # If GUVI sends no body, fabricate one
+    # GUVI / tester may send no body → fabricate one
     if not request:
         conversation_id = "guvi-test"
-        message = "Hello"
+        message = "test message"
     else:
         conversation_id = request.get("conversation_id", "guvi-test")
-        message = request.get("message", "Hello")
+        message = request.get("message", "test message")
 
     return handle_message(
         conversation_id=conversation_id,

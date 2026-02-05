@@ -7,13 +7,8 @@ from honeypot_brain import honeypot_reply_for_phase
 from scoring import compute_risk_score
 from fingerprint import analyze_attacker
 
-def handle_message(
-    conversation_id: str,
-    message: str,
-    ip: str,
-    user_agent: str
-) -> ScamAnalysisResponse:
-    # 1️⃣ Load or initialize conversation state
+def handle_message(conversation_id: str, message: str, ip: str, user_agent: str) -> ScamAnalysisResponse:
+    # Load or initialize conversation state
     state = get_conversation(conversation_id)
 
     if not state:
@@ -24,6 +19,7 @@ def handle_message(
 
     current_phase: ScamPhase = state["phase"]
     history = state["messages"]
+
 
     # 2️⃣ Save scammer message
     history.append({
