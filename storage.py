@@ -3,7 +3,7 @@ import os
 import redis
 from lifecycle import ScamPhase
 
-redis_url = os.getenv("REDIS_URL")
+redis_url = os.getenv("REDIS_URL", "rediss://default:AUp0AAIncDEyODg1YWI2Yzk0ZGY0NThlOWUyNDBjZDQxNDMwZGM2MnAxMTkwNjA@capable-rabbit-19060.upstash.io:6379")
 if redis_url:
     redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
 else:

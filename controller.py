@@ -1,9 +1,10 @@
+# controller.py - UPDATED TO USE LLM REPLIES
 from schemas import ScamAnalysisResponse
 from intelligence import detect_scam, extract_intelligence
 from storage import get_conversation, save_conversation
 from lifecycle import ScamPhase
 from phase_engine import next_phase
-from honeypot_brain import honeypot_reply_for_phase
+from ai_honeypot import generate_honeypot_reply  # USES YOUR EXISTING FILE with LLM!
 from scoring import compute_risk_score
 from fingerprint import analyze_attacker
 
@@ -46,15 +47,17 @@ def handle_message(
 
     detection = detect_scam(scammer_text)
     intelligence = None
+    scam_type = None
 
     if detection.is_scam:
         intelligence = extract_intelligence(scammer_text)
+        scam_type = "upi_fraud"  # Default, can be enhanced later
         new_phase = next_phase(current_phase, message)
     else:
         new_phase = current_phase
 
-    # 4️⃣ Generate honeypot reply
-    reply = honeypot_reply_for_phase(new_phase)
+    # 4️⃣ Generate honeypot reply (NOW USING LLM via ai_honeypot.py!)
+    reply = generate_honeypot_reply(history, scam_type or "unknown", new_phase)
 
     # 5️⃣ Build attacker fingerprint (GUVI-safe defaults)
     fingerprint = analyze_attacker(
@@ -89,7 +92,7 @@ def handle_message(
     # 9️⃣ Return API response
     return ScamAnalysisResponse(
         is_scam=detection.is_scam,
-        scam_type="upi_fraud" if detection.is_scam else None,
+        scam_type=scam_type,
         extracted_intelligence=intelligence,
         confidence=detection.confidence,
         honeypot_reply=reply,
