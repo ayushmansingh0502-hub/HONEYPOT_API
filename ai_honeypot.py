@@ -8,7 +8,11 @@ from lifecycle import ScamPhase
 API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
 if API_KEY:
     genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    try:
+        model = genai.GenerativeModel('gemini-pro')
+    except Exception as e:
+        print(f"⚠️ Model initialization failed: {e}. Will use fallback.")
+        model = None
 else:
     model = None
     print("⚠️ WARNING: GOOGLE_AI_STUDIO_KEY not set. Using rule-based replies.")
