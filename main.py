@@ -1,6 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException, Body, Request
 from fastapi.security import APIKeyHeader
+from collections import defaultdict, deque
+from threading import Lock
+import logging
 import os
+import time
 from schemas import ScamAnalysisResponse
 from controller import handle_message
 
@@ -8,11 +12,45 @@ app = FastAPI(title="Agentic Honeypot Backend")
 
 API_KEY = os.getenv("API_KEY", "hackathon-secret-key")
 api_key_header = APIKeyHeader(name="x-api-key", auto_error=True)
+RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "30"))
+RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("honeypot_api")
+
+_rate_limit_buckets: dict[str, deque[float]] = defaultdict(deque)
+_rate_limit_lock = Lock()
 
 
 def verify_api_key(api_key: str = Depends(api_key_header)):
     if api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key")
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _is_rate_limited(client_ip: str) -> bool:
+    now = time.time()
+    cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+
+    with _rate_limit_lock:
+        bucket = _rate_limit_buckets[client_ip]
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
+
+        if len(bucket) >= RATE_LIMIT_REQUESTS:
+            return True
+
+        bucket.append(now)
+        return False
 
 
 @app.get("/")
@@ -31,6 +69,21 @@ async def honeypot(
     body: dict = Body(default=None),
     api_key: str = Depends(verify_api_key)
 ):
+    start = time.perf_counter()
+    client_ip = _get_client_ip(request)
+
+    if _is_rate_limited(client_ip):
+        logger.warning(
+            "honeypot_rate_limited ip=%s path=%s method=%s status=429",
+            client_ip,
+            request.url.path,
+            request.method,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Please retry shortly.",
+        )
+
     # GUVI / tester may send no body -> fabricate one
     if not body:
         conversation_id = "guvi-test"
@@ -40,11 +93,28 @@ async def honeypot(
         message = body.get("message", "test message")
 
     try:
-        return handle_message(
+        response = handle_message(
             conversation_id=conversation_id,
             message=message,
-            ip=request.client.host if request.client else "unknown",
+            ip=client_ip,
             user_agent=request.headers.get("user-agent", "unknown")
         )
+        logger.info(
+            "honeypot_request_ok ip=%s path=%s method=%s conversation_id=%s status=200 latency_ms=%d",
+            client_ip,
+            request.url.path,
+            request.method,
+            conversation_id,
+            int((time.perf_counter() - start) * 1000),
+        )
+        return response
     except Exception:
+        logger.exception(
+            "honeypot_request_failed ip=%s path=%s method=%s conversation_id=%s status=500 latency_ms=%d",
+            client_ip,
+            request.url.path,
+            request.method,
+            conversation_id,
+            int((time.perf_counter() - start) * 1000),
+        )
         raise HTTPException(status_code=500, detail="Internal processing error. Check service logs for root cause.")
