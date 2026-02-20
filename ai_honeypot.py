@@ -5,7 +5,7 @@ from typing import List, Dict
 from lifecycle import ScamPhase
 
 # Configure Gemini API
-API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
+API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
 if API_KEY:
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('gemini-2.5-flash')

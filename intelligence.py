@@ -7,7 +7,7 @@ from typing import NamedTuple
 from schemas import ExtractedIntelligence
 
 # Configure Gemini API (set GOOGLE_AI_STUDIO_KEY environment variable)
-API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
+API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
 if API_KEY:
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('gemini-2.5-flash')
