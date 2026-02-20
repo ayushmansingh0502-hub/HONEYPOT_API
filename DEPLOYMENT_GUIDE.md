@@ -361,6 +361,19 @@ pip install -r requirements.txt
 # In Render dashboard: Settings → Build Command
 ```
 
+### Problem: "metadata-generation-failed" for `pydantic-core`
+
+**Cause:** Render is trying to build `pydantic-core` from source, which needs a Rust compiler not available in some free-tier builds.
+
+**Fix (recommended):** Pin to wheel-friendly versions and redeploy:
+```txt
+fastapi==0.104.1
+uvicorn[standard]==0.24.0.post1
+pydantic==2.5.0
+```
+
+**Alternative:** Deploy with Docker and install Rust in the image if you must keep newer versions.
+
 ### Problem: "GOOGLE_AI_STUDIO_KEY not set"
 
 **Cause:** Environment variable missing

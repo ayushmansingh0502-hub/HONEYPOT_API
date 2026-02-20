@@ -1,5 +1,6 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-redis==5.0.1
-pydantic==2.5.0        ← KEY: This version has pre-compiled wheels
-google-generativeai==0.3.2
+fastapi==0.115.5
+uvicorn[standard]==0.30.6
+redis==5.0.8
+pydantic==2.10.3        # ← Changed from 2.9.2
+pydantic-core==2.27.1   # ← Added explicitly
+google-generativeai==0.8.3
