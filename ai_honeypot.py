@@ -11,11 +11,11 @@ if API_KEY:
     try:
         model = genai.GenerativeModel('gemini-pro')
     except Exception as e:
-        print(f"⚠️ Model initialization failed: {e}. Will use fallback.")
+        print(f"WARNING: Model initialization failed: {e}. Will use fallback.")
         model = None
 else:
     model = None
-    print("⚠️ WARNING: GOOGLE_AI_STUDIO_KEY not set. Using rule-based replies.")
+    print("WARNING: GOOGLE_AI_STUDIO_KEY not set. Using rule-based replies.")
 
 
 def generate_honeypot_reply(
@@ -36,7 +36,7 @@ def generate_honeypot_reply(
         try:
             return _generate_llm_reply(history, scam_type, phase)
         except Exception as e:
-            print(f"⚠️ LLM reply generation failed: {e}. Using fallback.")
+            print(f"WARNING: LLM reply generation failed: {e}. Using fallback.")
             # Fall through to rule-based responses
 
     # Fallback: Original rule-based logic

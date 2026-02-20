@@ -13,11 +13,11 @@ if API_KEY:
     try:
         model = genai.GenerativeModel('gemini-pro')
     except Exception as e:
-        print(f"⚠️ Model initialization failed: {e}. Will use fallback.")
+        print(f"WARNING: Model initialization failed: {e}. Will use fallback.")
         model = None
 else:
     model = None
-    print("⚠️ WARNING: GOOGLE_AI_STUDIO_KEY not set. Using fallback detection.")
+    print("WARNING: GOOGLE_AI_STUDIO_KEY not set. Using fallback detection.")
 
 
 class DetectionResult(NamedTuple):
@@ -72,7 +72,7 @@ Message: {escaped_message}
             )
             
         except Exception as e:
-            print(f"⚠️ LLM detection failed: {e}. Using fallback.")
+            print(f"WARNING: LLM detection failed: {e}. Using fallback.")
     
     # Fallback: Keyword-based detection
     scam_keywords = [
