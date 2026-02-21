@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Body, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from collections import defaultdict, deque
 from threading import Lock
@@ -9,6 +10,15 @@ from schemas import ScamAnalysisResponse
 from controller import handle_message
 
 app = FastAPI(title="Agentic Honeypot Backend")
+
+# Add CORS middleware to allow Chrome extension
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (Chrome extensions)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers (including x-api-key)
+)
 
 API_KEY = os.getenv("API_KEY", "hackathon-secret-key")
 api_key_header = APIKeyHeader(name="x-api-key", auto_error=True)

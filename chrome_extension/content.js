@@ -15,6 +15,9 @@ let debounceTimer = null;
  */
 function extractEmailData() {
   try {
+    // Find email content container first
+    const emailContainer = getEmailContentContainer();
+    
     // Gmail HTML structure (may vary)
     const fromElement = document.querySelector('[data-email]');
     const fromEmail = fromElement?.getAttribute('data-email') || 
@@ -29,12 +32,25 @@ function extractEmailData() {
                     document.title.split(' - ')[0] ||
                     '';
     
-    const messageText = document.body.innerText;
+    // Extract text ONLY from email container, not entire page
+    let messageText = '';
+    if (emailContainer) {
+      messageText = emailContainer.innerText;
+    } else {
+      messageText = document.body.innerText;
+    }
     
-    // Extract links
-    const links = Array.from(document.querySelectorAll('a'))
-      .map(a => a.href)
-      .filter(href => href.startsWith('http'));
+    // Extract links - prioritize email container
+    let links = [];
+    if (emailContainer) {
+      links = Array.from(emailContainer.querySelectorAll('a'))
+        .map(a => a.href)
+        .filter(href => href.startsWith('http'));
+    } else {
+      links = Array.from(document.querySelectorAll('a'))
+        .map(a => a.href)
+        .filter(href => href.startsWith('http'));
+    }
     
     return {
       from_email: fromEmail,
@@ -55,12 +71,15 @@ function extractEmailData() {
 async function analyzeCurrentEmail() {
   const emailData = extractEmailData();
   
+  console.log("📧 Email data extracted:", emailData);
+  
   if (!emailData || !emailData.message_text) {
     console.log("⚠️ No email content found to analyze");
     return;
   }
   
-  console.log("📧 Analyzing email:", emailData.from_email);
+  console.log("📧 Analyzing email from:", emailData.from_email, "Subject:", emailData.subject);
+  console.log("📝 Message length:", emailData.message_text.length, "Links found:", emailData.links.length);
   
   // Send to background script
   chrome.runtime.sendMessage(
@@ -69,9 +88,12 @@ async function analyzeCurrentEmail() {
       data: emailData
     },
     (response) => {
+      console.log("📨 Response from background:", response);
       if (response.success) {
+        console.log("✅ Analysis successful:", response.data);
         showAnalysisResult(response.data, emailData);
       } else {
+        console.error("❌ Analysis failed:", response.error);
         showError(response.error);
       }
     }
@@ -90,14 +112,29 @@ function showAnalysisResult(analysis, emailData) {
   // Find Gmail's email container and inject banner
   const emailContainer = document.querySelector('[data-thread-id]');
   if (emailContainer) {
+    // Insert at the top of the thread
     const existingBanner = emailContainer.querySelector('.scam-shield-banner');
     if (existingBanner) existingBanner.remove();
     emailContainer.insertBefore(banner, emailContainer.firstChild);
+    console.log("✅ Banner inserted in thread container");
+  } else {
+    // Fallback: insert in main content area
+    const mainContent = document.querySelector('[role="main"]');
+    if (mainContent) {
+      const existingBanner = mainContent.querySelector('.scam-shield-banner');
+      if (existingBanner) existingBanner.remove();
+      mainContent.insertBefore(banner, mainContent.firstChild);
+      console.log("✅ Banner inserted in main content");
+    }
   }
   
-  // Highlight suspicious content
+  // Highlight suspicious content ONLY in email body
   if (analysis.is_scam && analysis.extracted_intelligence) {
+    console.log("🎯 Email is scam, starting highlighting...");
+    console.log("📌 Extracted intelligence:", analysis.extracted_intelligence);
     highlightSuspiciousContent(analysis.extracted_intelligence);
+  } else {
+    console.log("✅ Email is safe, no highlighting needed");
   }
 }
 
@@ -163,50 +200,146 @@ function createAnalysisBanner(analysis) {
 }
 
 /**
+ * Find the email content container
+ */
+function getEmailContentContainer() {
+  // Try various Gmail selectors for email body - from most specific to general
+  const selectors = [
+    'div[data-message-id]',      // Message container by ID
+    '[role="article"]',           // Article role (Gmail new UI)
+    'div.aO.T-I-aO',             // Message body wrapper
+    '.ii',                        // Message inspection pane (newer Gmail)
+    'div[role="main"] .Hs',       // Main content email display
+    'div[data-thread-id]',        // Thread container
+  ];
+  
+  let container = null;
+  
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    if (el && el.innerText && el.innerText.length > 20) { // Ensure it has substantial text
+      console.log("✅ Found email container with selector:", selector, "Text length:", el.innerText.length);
+      container = el;
+      break;
+    }
+  }
+  
+  // If nothing found, try finding the email body by looking for common email patterns
+  if (!container) {
+    const allDivs = document.querySelectorAll('div');
+    for (let div of allDivs) {
+      const text = div.innerText;
+      // Look for divs with email content patterns (greeting + email patterns)
+      if (text && text.includes('Dear') && (text.includes('account') || text.includes('verify') || text.includes('click'))) {
+        console.log("✅ Found email container by content pattern");
+        container = div;
+        break;
+      }
+    }
+  }
+  
+  // Last resort: look in main content area
+  if (!container) {
+    const mainContent = document.querySelector('[role="main"]');
+    if (mainContent && mainContent.innerText && mainContent.innerText.length > 50) {
+      console.log("✅ Using main content area as container");
+      container = mainContent;
+    }
+  }
+  
+  if (!container) {
+    console.warn("⚠️ Could not find email container");
+  }
+  
+  return container;
+}
+
+/**
  * Highlight suspicious UPIs, links, etc in email
  */
 function highlightSuspiciousContent(intelligence) {
-  // Highlight UPI IDs
-  if (intelligence.upi_ids && intelligence.upi_ids.length > 0) {
-    highlightText(intelligence.upi_ids, '#ffcccc', '#cc3333');
+  const emailContainer = getEmailContentContainer();
+  console.log("🔎 Highlighting in container:", emailContainer ? "FOUND" : "NOT FOUND");
+  
+  if (!emailContainer) {
+    console.warn("⚠️ Could not find email content container for highlighting");
+    return;
   }
   
-  // Highlight phishing links
+  // Highlight UPI IDs - only in email container
+  if (intelligence.upi_ids && intelligence.upi_ids.length > 0) {
+    console.log("💰 Highlighting UPI IDs:", intelligence.upi_ids);
+    highlightText(intelligence.upi_ids, '#ffcccc', '#cc3333', emailContainer);
+  }
+  
+  // Highlight phishing links - only in email container
   if (intelligence.phishing_links && intelligence.phishing_links.length > 0) {
-    const links = document.querySelectorAll('a');
+    console.log("🔗 Highlighting phishing links:", intelligence.phishing_links);
+    const links = emailContainer.querySelectorAll('a');
+    console.log("🔎 Found", links.length, "links in email container");
+    
     links.forEach(link => {
       if (intelligence.phishing_links.some(phish => link.href.includes(phish))) {
         link.style.backgroundColor = '#ffcccc';
         link.style.color = '#cc3333';
         link.style.fontWeight = 'bold';
         link.style.textDecoration = 'line-through';
+        console.log("✅ Highlighted link:", link.href);
       }
     });
   }
 }
 
-// Helper function to highlight text
-function highlightText(texts, bgColor, textColor) {
+// Helper function to highlight text ONLY in email container
+function highlightText(texts, bgColor, textColor, container) {
+  if (!container) {
+    console.warn("⚠️ No container for highlighting");
+    return;
+  }
+  
+  console.log("🔍 Starting to highlight:", texts, "in container with", container.innerText.length, "chars");
+  
   const walker = document.createTreeWalker(
-    document.body,
+    container,  // Only walk within email container
     NodeFilter.SHOW_TEXT,
     null,
     false
   );
   
   let node;
+  const nodesToProcess = [];
+  
+  // Collect nodes that contain our target text
   while (node = walker.nextNode()) {
+    const nodeText = node.textContent.toLowerCase();
     texts.forEach(text => {
-      if (node.textContent.includes(text)) {
-        const regex = new RegExp(`(${text})`, 'gi');
-        const span = document.createElement('span');
-        span.innerHTML = node.textContent.replace(regex, 
-          `<span style="background: ${bgColor}; color: ${textColor}; font-weight: bold;">$1</span>`
-        );
-        node.parentNode.replaceChild(span, node);
+      if (nodeText.includes(text.toLowerCase())) {
+        nodesToProcess.push({ node, text });
+        console.log("📍 Found match:", text, "in node");
       }
     });
   }
+  
+  console.log("📊 Processing", nodesToProcess.length, "nodes for highlighting");
+  
+  // Replace nodes with highlighted versions
+  const processed = new Set();
+  nodesToProcess.forEach(({ node, text }) => {
+    if (processed.has(node)) return; // Skip if already processed
+    processed.add(node);
+    
+    try {
+      const regex = new RegExp(`(${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      const span = document.createElement('span');
+      span.innerHTML = node.textContent.replace(regex, 
+        `<span class="scam-shield-highlight" style="background: ${bgColor}; color: ${textColor}; font-weight: bold; padding: 2px 4px; border-radius: 2px;">$1</span>`
+      );
+      node.parentNode.replaceChild(span, node);
+      console.log("✅ Highlighted:", text);
+    } catch (e) {
+      console.error("❌ Error highlighting:", text, e);
+    }
+  });
 }
 
 /**
@@ -229,9 +362,19 @@ function showError(errorMsg) {
     </div>
   `;
   
+  // Insert in thread container or main content
   const emailContainer = document.querySelector('[data-thread-id]');
   if (emailContainer) {
+    const existingBanner = emailContainer.querySelector('.scam-shield-error');
+    if (existingBanner) existingBanner.remove();
     emailContainer.insertBefore(banner, emailContainer.firstChild);
+  } else {
+    const mainContent = document.querySelector('[role="main"]');
+    if (mainContent) {
+      const existingBanner = mainContent.querySelector('.scam-shield-error');
+      if (existingBanner) existingBanner.remove();
+      mainContent.insertBefore(banner, mainContent.firstChild);
+    }
   }
 }
 
