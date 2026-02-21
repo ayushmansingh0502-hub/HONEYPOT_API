@@ -123,9 +123,11 @@ YOUR REPLY:"""
         )
     )
     
-    logger.debug(f"📥 Received response from Gemini")
+    logger.info(f"📥 Received response from Gemini")
+    logger.info(f"Response text: '{response.text}'")
     
     reply = response.text.strip()
+    logger.info(f"Stripped reply: '{reply}' (length: {len(reply)})")
     
     # Remove quotes if LLM wrapped the reply
     if reply.startswith('"') and reply.endswith('"'):
@@ -133,6 +135,7 @@ YOUR REPLY:"""
     if reply.startswith("'") and reply.endswith("'"):
         reply = reply[1:-1]
     
+    logger.info(f"Final reply after quote removal: '{reply}' (length: {len(reply)})")
     return reply
 
 
