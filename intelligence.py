@@ -11,7 +11,7 @@ API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-
 if API_KEY:
     genai.configure(api_key=API_KEY)
     try:
-        model = genai.GenerativeModel('models/gemini-1.0-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
         print(f"⚠️ WARNING: Model initialization failed: {e}. Will use fallback.")
         model = None
