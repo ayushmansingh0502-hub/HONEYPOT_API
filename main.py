@@ -177,3 +177,65 @@ async def get_flagged_intelligence_stats(api_key: str = Depends(verify_api_key))
     """
     from storage import get_flagged_intelligence_stats
     return get_flagged_intelligence_stats()
+
+
+@app.post("/analyze-email")
+async def analyze_email(
+    request: Request,
+    body: dict = Body(default=None),
+    api_key: str = Depends(verify_api_key)
+):
+    """
+    Analyze an email for scams.
+    Used by Chrome extension and email clients.
+    """
+    from schemas import EmailAnalysisRequest
+    from email_analyzer import analyze_email as analyze_email_func
+    
+    start = time.perf_counter()
+    client_ip = _get_client_ip(request)
+    
+    if _is_rate_limited(client_ip):
+        logger.warning(
+            "email_analyze_rate_limited ip=%s path=%s method=%s status=429",
+            client_ip,
+            request.url.path,
+            request.method,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Please retry shortly.",
+        )
+    
+    try:
+        # Parse email data
+        if not body:
+            raise HTTPException(status_code=400, detail="Missing email data")
+        
+        email_request = EmailAnalysisRequest(**body)
+        
+        logger.info(f"📧 Analyzing email from {email_request.from_email}")
+        
+        # Use email analyzer
+        response = analyze_email_func(email_request)
+        
+        logger.info(
+            "email_analyze_ok ip=%s path=%s method=%s from=%s is_scam=%s confidence=%s status=200 latency_ms=%d",
+            client_ip,
+            request.url.path,
+            request.method,
+            email_request.from_email,
+            response.is_scam,
+            response.confidence,
+            int((time.perf_counter() - start) * 1000),
+        )
+        return response
+    except Exception:
+        logger.exception(
+            "email_analyze_failed ip=%s path=%s method=%s status=500 latency_ms=%d",
+            client_ip,
+            request.url.path,
+            request.method,
+            int((time.perf_counter() - start) * 1000),
+        )
+        raise HTTPException(status_code=500, detail="Internal processing error. Check service logs for root cause.")

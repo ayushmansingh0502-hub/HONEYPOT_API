@@ -20,3 +20,27 @@ class ScamAnalysisResponse(BaseModel):
     blocked: bool = False
     blocked_message: Optional[str] = None
     flagged_match: bool = False
+
+
+class EmailAnalysisRequest(BaseModel):
+    message_id: Optional[str] = None
+    thread_id: Optional[str] = None
+    from_email: str
+    from_name: Optional[str] = None
+    subject: Optional[str] = None
+    message_text: str
+    links: List[str] = Field(default_factory=list)
+
+
+class EmailIndicator(BaseModel):
+    key: str
+    value: str
+
+
+class EmailAnalysisResponse(BaseModel):
+    is_scam: bool
+    confidence: float
+    risk: Dict[str, Any]
+    scam_type: Optional[str] = None
+    reasons: List[str] = Field(default_factory=list)
+    extracted_intelligence: Optional[ExtractedIntelligence] = None
