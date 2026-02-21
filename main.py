@@ -132,17 +132,35 @@ async def debug_gemini(api_key: str = Depends(verify_api_key)):
         "api_key_present": bool(api_key_value),
         "api_key_length": len(api_key_value) if api_key_value else 0,
         "api_key_starts_with": api_key_value[:10] if api_key_value else None,
+        "available_models": [],
         "model_test": None,
         "error": None
     }
     
-    # Try to call Gemini
+    # List available models
     try:
         genai.configure(api_key=api_key_value)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content("Say 'Hello from Gemini!'")
-        result["model_test"] = "SUCCESS"
-        result["response"] = response.text.strip()
+        models = genai.list_models()
+        result["available_models"] = [
+            {"name": m.name, "supports_generate_content": "generateContent" in m.supported_generation_methods}
+            for m in models
+        ]
+    except Exception as e:
+        result["list_models_error"] = f"{type(e).__name__}: {str(e)}"
+    
+    # Try to call Gemini
+    try:
+        # Try first available model that supports generateContent
+        for model_info in result["available_models"]:
+            if model_info["supports_generate_content"]:
+                model = genai.GenerativeModel(model_info["name"])
+                response = model.generate_content("Say 'Hello from Gemini!'")
+                result["model_test"] = "SUCCESS"
+                result["response"] = response.text.strip()
+                result["used_model"] = model_info["name"]
+                break
+        else:
+            raise Exception("No models support generateContent")
     except Exception as e:
         result["model_test"] = "FAILED"
         result["error"] = f"{type(e).__name__}: {str(e)}"
