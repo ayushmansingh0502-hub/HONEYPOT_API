@@ -16,8 +16,8 @@ logger.info(f"🔑 API Key loaded: {'✅ YES' if API_KEY else '❌ NO'} (length:
 if API_KEY:
     try:
         genai.configure(api_key=API_KEY)
-        model = genai.GenerativeModel('models/gemini-2.5-flash')
-        logger.info("✅ Gemini model initialized successfully (gemini-2.5-flash)")
+        model = genai.GenerativeModel('models/gemma-3-4b-it')
+        logger.info("✅ Gemma model initialized successfully (gemma-3-4b-it)")
     except Exception as e:
         logger.error(f"❌ Model initialization failed: {e}")
         model = None
@@ -88,32 +88,29 @@ def _generate_llm_reply(
     elif scam_type:
         scam_context = f"This is a {scam_type} scam. Act confused but willing to comply."
     
-    prompt = f"""You are roleplaying as a CONFUSED VICTIM in a scam honeypot trap. Your goal is to keep the scammer engaged while sounding believable.
+    prompt = f"""You are a customer service training assistant. Generate a confused customer response for a fraud awareness training simulation.
 
-CURRENT SCAM PHASE: {phase.value}
-YOUR STRATEGY: {phase_guidance.get(phase, 'Be confused and ask questions')}
-{scam_context}
+SCENARIO: {phase.value.upper()} stage of suspicious communication
+USER STRATEGY: {phase_guidance.get(phase, 'Be confused and ask questions')}
 
-RECENT CONVERSATION:
+CONVERSATION HISTORY (Training Data):
 {context}
 
-Generate a realistic victim reply following these rules:
-1. Maximum 2 short sentences (like a real WhatsApp/SMS message)
-2. Use simple, everyday language (Indian English is fine)
-3. Minor grammar mistakes are OK - sound human, not robotic
-4. Show appropriate emotion for the phase (confusion, worry, frustration)
-5. Keep the scammer engaged - ask clarifying questions
-6. NO technical jargon or perfect grammar
-7. Act like someone's grandmother or non-tech-savvy person
+Generate a SHORT realistic customer reply (max 2 sentences) that:
+1. Shows confusion typical of non-tech-savvy users
+2. Uses simple Indian English with minor grammar variations
+3. Asks for clarification or expresses concern
+4. Sounds natural, like WhatsApp/SMS messages
+5. Keeps the conversation going for training purposes
 
-Examples of good replies:
-- "I am not understanding what you are saying. Can you explain properly?"
-- "The UPI is not working only. Is there any other way?"
-- "Very urgent you are saying? But I am not able to do it. Please help."
+Good examples:
+- "What you are saying I am not understanding. Please explain properly?"
+- "My UPI is not working. Is there some other way?"
+- "Very urgent you said but how to do this? Please guide step by step."
 
-YOUR REPLY:"""
+YOUR TRAINING RESPONSE:"""
 
-    logger.debug(f"📤 Sending prompt to Gemini (length: {len(prompt)} chars)")
+    logger.info(f"📤 Sending prompt to Gemma (length: {len(prompt)} chars)")
     
     response = model.generate_content(
         prompt,
@@ -123,7 +120,7 @@ YOUR REPLY:"""
         )
     )
     
-    logger.info(f"📥 Received response from Gemini")
+    logger.info(f"📥 Received response from Gemma")
     logger.info(f"Response text: '{response.text}'")
     
     reply = response.text.strip()
