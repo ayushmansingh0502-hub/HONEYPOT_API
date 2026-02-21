@@ -63,7 +63,7 @@ def _generate_llm_reply(
     phase: ScamPhase
 ) -> str:
     """
-    Generate contextual reply using Google AI Studio (Gemini).
+    Generate contextual reply using Google AI Studio (Gemma).
     """
     # Build conversation context (last 5 messages)
     context_lines = []
@@ -72,51 +72,53 @@ def _generate_llm_reply(
         context_lines.append(f"{role}: {msg['content']}")
     context = "\n".join(context_lines)
     
-    # Phase-specific guidance
+    # Extract the last scammer message to address it directly
+    last_scammer_msg = ""
+    for msg in reversed(history):
+        if msg["role"] == "scammer":
+            last_scammer_msg = msg["content"]
+            break
+    
+    # Phase-specific guidance - MORE DIRECT & CONCRETE
     phase_guidance = {
-        ScamPhase.INITIAL: "Show mild confusion. Ask what this is about in simple terms.",
-        ScamPhase.PRESSURE: "Express worry but hesitation. Ask for clarification on the urgency.",
-        ScamPhase.PAYMENT: "Seem willing to pay but claim technical difficulties. Ask for alternative payment methods.",
-        ScamPhase.ESCALATION: "Show frustration with repeated failures. Request official confirmation or support number.",
-        ScamPhase.EXIT: "Politely delay. Say you'll check with family/bank and get back to them."
+        ScamPhase.INITIAL: "Respond addressing what they just said. Ask a specific clarifying question about it.",
+        ScamPhase.PRESSURE: "React to the urgency mentioned. Show concern but ask practical questions about HOW to do it.",
+        ScamPhase.PAYMENT: "Acknowledge the payment request. Ask specific questions about amount, method, or account details.",
+        ScamPhase.ESCALATION: "React to the threat/consequences mentioned. Express concern and ask for alternatives or proof.",
+        ScamPhase.EXIT: "Acknowledge what they said. Ask for time to check with family/bank, or request they call back later."
     }
     
-    # Scam type context
-    scam_context = ""
-    if scam_type == "upi_fraud":
-        scam_context = "This is a UPI payment scam. Show confusion about payment apps and digital transactions."
-    elif scam_type:
-        scam_context = f"This is a {scam_type} scam. Act confused but willing to comply."
-    
-    prompt = f"""You are a customer service training assistant. Generate a confused customer response for a fraud awareness training simulation.
+    prompt = f"""You roleplay as a victim in a scam awareness training. The scammer just said:
+"{last_scammer_msg}"
 
-SCENARIO: {phase.value.upper()} stage of suspicious communication
-USER STRATEGY: {phase_guidance.get(phase, 'Be confused and ask questions')}
+Your job: Generate a SHORT, REALISTIC victim response (1-2 sentences max) that:
+1. DIRECTLY ADDRESSES what the scammer said (don't ignore their message)
+2. Shows confusion or mild concern (typical victim behavior)
+3. Asks SPECIFIC questions about THEIR request
+4. Uses simple, natural language
+5. Could be a WhatsApp/SMS message from an Indian non-tech-savvy person
 
-CONVERSATION HISTORY (Training Data):
+GUIDELINES FOR THIS PHASE ({phase.value.upper()}):
+- {phase_guidance.get(phase, 'Respond naturally')}
+- If money/payment mentioned: ask HOW, WHERE, HOW MUCH specifically
+- If account/verification mentioned: ask WHAT account, WHICH app, HOW to verify
+- If threat/urgency mentioned: ask WHY urgent, WHAT happens if you don't
+- Never deny having the thing they mentioned (don't say "I don't use electricity")
+- Always acknowledge their message and add ONE specific question
+
+CONVERSATION SO FAR:
 {context}
 
-Generate a SHORT realistic customer reply (max 2 sentences) that:
-1. Shows confusion typical of non-tech-savvy users
-2. Uses simple Indian English with minor grammar variations
-3. Asks for clarification or expresses concern
-4. Sounds natural, like WhatsApp/SMS messages
-5. Keeps the conversation going for training purposes
-
-Good examples:
-- "What you are saying I am not understanding. Please explain properly?"
-- "My UPI is not working. Is there some other way?"
-- "Very urgent you said but how to do this? Please guide step by step."
-
-YOUR TRAINING RESPONSE:"""
+Generate the victim's response (no quotes, no explanations):"""
 
     logger.info(f"📤 Sending prompt to Gemma (length: {len(prompt)} chars)")
+    logger.info(f"📌 Last scammer message: '{last_scammer_msg}'")
     
     response = model.generate_content(
         prompt,
         generation_config=genai.GenerationConfig(
-            temperature=0.8,  # More creative for variety
-            max_output_tokens=150
+            temperature=0.7,  # Balanced - still natural but focused
+            max_output_tokens=120
         )
     )
     
