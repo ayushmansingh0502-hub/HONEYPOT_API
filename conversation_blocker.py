@@ -22,7 +22,7 @@ def should_block_conversation(
     history: List[Dict],
     phase: ScamPhase,
     confidence: float
-) -> tuple[bool, str | None]:
+) -> tuple:
     """
     Determine if honeypot should stop engaging and send blocking message instead.
     
@@ -47,8 +47,8 @@ def should_block_conversation(
     payment_keywords = ["upi", "paytm", "googlepay", "phonepay", "transfer", "send money", "pay"]
     threat_keywords = ["immediate", "urgent", "now", "right now", "police", "freeze", "block"]
     
-    payment_mentions = sum(1 for msg in history if m["role"] == "scammer" and any(kw in m["content"].lower() for kw in payment_keywords))
-    threat_mentions = sum(1 for msg in history if m["role"] == "scammer" and any(kw in m["content"].lower() for kw in threat_keywords))
+    payment_mentions = sum(1 for msg in history if msg["role"] == "scammer" and any(kw in msg["content"].lower() for kw in payment_keywords))
+    threat_mentions = sum(1 for msg in history if msg["role"] == "scammer" and any(kw in msg["content"].lower() for kw in threat_keywords))
     
     # Block if payment asked multiple times + high confidence
     if payment_mentions >= 2 and confidence >= 0.95:
