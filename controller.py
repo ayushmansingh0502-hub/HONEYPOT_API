@@ -7,6 +7,7 @@ from phase_engine import next_phase
 from ai_honeypot import generate_honeypot_reply  # USES YOUR EXISTING FILE with LLM!
 from scoring import compute_risk_score
 from fingerprint import analyze_attacker
+from conversation_blocker import should_block_conversation
 
 
 def handle_message(
@@ -56,17 +57,56 @@ def handle_message(
     else:
         new_phase = current_phase
 
-    # 4️⃣ Generate honeypot reply (NOW USING LLM via ai_honeypot.py!)
+    # 4️⃣ Check if conversation should be blocked
+    should_block, blocked_msg = should_block_conversation(history, new_phase, detection.confidence)
+    
+    if should_block:
+        # Block the conversation - don't generate LLM reply
+        reply = blocked_msg or "Your account has been temporarily locked."
+        fingerprint = analyze_attacker(
+            history=history,
+            ip=ip or "unknown",
+            user_agent=user_agent or "unknown"
+        )
+        risk = compute_risk_score(
+            detection=detection,
+            fingerprint=fingerprint,
+            phase=new_phase,
+            intelligence=intelligence
+        )
+        
+        # Save blocked state and return
+        save_conversation(
+            conversation_id,
+            {
+                "phase": new_phase,
+                "messages": history,
+                "blocked": True
+            }
+        )
+        
+        return ScamAnalysisResponse(
+            is_scam=detection.is_scam,
+            scam_type=scam_type,
+            extracted_intelligence=intelligence,
+            confidence=detection.confidence,
+            honeypot_reply=reply,
+            risk=risk,
+            blocked=True,
+            blocked_message=reply
+        )
+
+    # 5️⃣ Generate honeypot reply (NOW USING LLM via ai_honeypot.py!)
     reply = generate_honeypot_reply(history, scam_type or "unknown", new_phase)
 
-    # 5️⃣ Build attacker fingerprint (GUVI-safe defaults)
+    # 6️⃣ Build attacker fingerprint (GUVI-safe defaults)
     fingerprint = analyze_attacker(
         history=history,
         ip=ip or "unknown",
         user_agent=user_agent or "unknown"
     )
 
-    # 6️⃣ Risk scoring
+    # 7️⃣ Risk scoring
     risk = compute_risk_score(
         detection=detection,
         fingerprint=fingerprint,
@@ -74,13 +114,13 @@ def handle_message(
         intelligence=intelligence
     )
 
-    # 7️⃣ Save honeypot reply
+    # 8️⃣ Save honeypot reply
     history.append({
         "role": "honeypot",
         "content": reply
     })
 
-    # 8️⃣ Persist updated conversation
+    # 9️⃣ Persist updated conversation
     save_conversation(
         conversation_id,
         {
@@ -89,12 +129,14 @@ def handle_message(
         }
     )
 
-    # 9️⃣ Return API response
+    # 🔟 Return API response
     return ScamAnalysisResponse(
         is_scam=detection.is_scam,
         scam_type=scam_type,
         extracted_intelligence=intelligence,
         confidence=detection.confidence,
         honeypot_reply=reply,
-        risk=risk
+        risk=risk,
+        blocked=False,
+        blocked_message=None
     )

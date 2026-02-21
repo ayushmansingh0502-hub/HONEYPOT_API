@@ -17,3 +17,5 @@ class ScamAnalysisResponse(BaseModel):
     confidence: float
     honeypot_reply: str
     risk: Optional[Dict[str, Any]] = None
+    blocked: bool = False
+    blocked_message: Optional[str] = None
