@@ -139,7 +139,7 @@ async def debug_gemini(api_key: str = Depends(verify_api_key)):
     # Try to call Gemini
     try:
         genai.configure(api_key=api_key_value)
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content("Say 'Hello from Gemini!'")
         result["model_test"] = "SUCCESS"
         result["response"] = response.text.strip()

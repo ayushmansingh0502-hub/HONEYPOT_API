@@ -16,8 +16,8 @@ logger.info(f"🔑 API Key loaded: {'✅ YES' if API_KEY else '❌ NO'} (length:
 if API_KEY:
     try:
         genai.configure(api_key=API_KEY)
-        model = genai.GenerativeModel('gemini-pro')
-        logger.info("✅ Gemini model initialized successfully")
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        logger.info("✅ Gemini model initialized successfully (gemini-1.5-flash)")
     except Exception as e:
         logger.error(f"❌ Model initialization failed: {e}")
         model = None
