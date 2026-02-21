@@ -118,3 +118,33 @@ async def honeypot(
             int((time.perf_counter() - start) * 1000),
         )
         raise HTTPException(status_code=500, detail="Internal processing error. Check service logs for root cause.")
+
+
+@app.get("/debug/gemini")
+async def debug_gemini(api_key: str = Depends(verify_api_key)):
+    """Test endpoint to verify Gemini API is working"""
+    import google.generativeai as genai
+    
+    # Check API key
+    api_key_value = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
+    
+    result = {
+        "api_key_present": bool(api_key_value),
+        "api_key_length": len(api_key_value) if api_key_value else 0,
+        "api_key_starts_with": api_key_value[:10] if api_key_value else None,
+        "model_test": None,
+        "error": None
+    }
+    
+    # Try to call Gemini
+    try:
+        genai.configure(api_key=api_key_value)
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content("Say 'Hello from Gemini!'")
+        result["model_test"] = "SUCCESS"
+        result["response"] = response.text.strip()
+    except Exception as e:
+        result["model_test"] = "FAILED"
+        result["error"] = f"{type(e).__name__}: {str(e)}"
+    
+    return result

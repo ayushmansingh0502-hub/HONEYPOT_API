@@ -1,21 +1,29 @@
 # ai_honeypot.py - UPDATED WITH GOOGLE AI STUDIO
 import google.generativeai as genai
 import os
+import logging
 from typing import List, Dict
 from lifecycle import ScamPhase
 
+# Setup logging
+logger = logging.getLogger("honeypot.ai")
+
 # Configure Gemini API
 API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
+
+logger.info(f"🔑 API Key loaded: {'✅ YES' if API_KEY else '❌ NO'} (length: {len(API_KEY) if API_KEY else 0})")
+
 if API_KEY:
-    genai.configure(api_key=API_KEY)
     try:
+        genai.configure(api_key=API_KEY)
         model = genai.GenerativeModel('gemini-pro')
+        logger.info("✅ Gemini model initialized successfully")
     except Exception as e:
-        print(f"⚠️ WARNING: Model initialization failed: {e}. Will use fallback.")
+        logger.error(f"❌ Model initialization failed: {e}")
         model = None
 else:
     model = None
-    print("⚠️ WARNING: GOOGLE_AI_STUDIO_KEY not set. Using rule-based replies.")
+    logger.warning("⚠️ GOOGLE_AI_STUDIO_KEY not set. Using rule-based replies.")
 
 
 def generate_honeypot_reply(
@@ -34,12 +42,18 @@ def generate_honeypot_reply(
     # Try LLM generation first if API key is available
     if model and API_KEY:
         try:
-            return _generate_llm_reply(history, scam_type, phase)
+            logger.info(f"🤖 Attempting LLM reply generation (phase: {phase.value})")
+            reply = _generate_llm_reply(history, scam_type, phase)
+            logger.info(f"✅ LLM reply generated: {reply[:50]}...")
+            return reply
         except Exception as e:
-            print(f"WARNING: LLM reply generation failed: {e}. Using fallback.")
+            logger.error(f"❌ LLM reply generation FAILED: {type(e).__name__}: {str(e)}")
             # Fall through to rule-based responses
+    else:
+        logger.warning(f"⚠️ LLM not available (model={model is not None}, API_KEY={API_KEY is not None})")
 
     # Fallback: Original rule-based logic
+    logger.info("🔄 Using rule-based fallback reply")
     return _generate_rule_based_reply(history, scam_type, phase)
 
 
@@ -99,6 +113,8 @@ Examples of good replies:
 
 YOUR REPLY:"""
 
+    logger.debug(f"📤 Sending prompt to Gemini (length: {len(prompt)} chars)")
+    
     response = model.generate_content(
         prompt,
         generation_config=genai.GenerationConfig(
@@ -106,6 +122,8 @@ YOUR REPLY:"""
             max_output_tokens=150
         )
     )
+    
+    logger.debug(f"📥 Received response from Gemini")
     
     reply = response.text.strip()
     
