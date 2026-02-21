@@ -7,17 +7,17 @@ from typing import NamedTuple
 from schemas import ExtractedIntelligence
 
 # Configure Gemini API (set GOOGLE_AI_STUDIO_KEY environment variable)
-API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
+API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
 if API_KEY:
     genai.configure(api_key=API_KEY)
     try:
         model = genai.GenerativeModel('gemini-pro')
     except Exception as e:
-        print(f"WARNING: Model initialization failed: {e}. Will use fallback.")
+        print(f"⚠️ WARNING: Model initialization failed: {e}. Will use fallback.")
         model = None
 else:
     model = None
-    print("WARNING: GOOGLE_AI_STUDIO_KEY not set. Using fallback detection.")
+    print("⚠️ WARNING: GOOGLE_AI_STUDIO_KEY not set. Using fallback detection.")
 
 
 class DetectionResult(NamedTuple):

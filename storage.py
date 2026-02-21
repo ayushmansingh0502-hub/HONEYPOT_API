@@ -8,7 +8,7 @@ _memory_store: dict[str, str] = {}
 
 
 def _build_redis_client():
-    redis_url = os.getenv("REDIS_URL", "")
+    redis_url = os.getenv("REDIS_URL", "rediss://default:AUp0AAIncDEyODg1YWI2Yzk0ZGY0NThlOWUyNDBjZDQxNDMwZGM2MnAxMTkwNjA@capable-rabbit-19060.upstash.io:6379")
     if redis_url:
         return redis.Redis.from_url(redis_url, decode_responses=True)
 
