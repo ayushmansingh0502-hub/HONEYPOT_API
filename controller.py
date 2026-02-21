@@ -55,17 +55,16 @@ def handle_message(
     )
 
     detection = detect_scam(scammer_text)
-    intelligence = None
+    intelligence = extract_intelligence(scammer_text)  # ALWAYS extract - don't depend on scam detection
     scam_type = None
 
     if detection.is_scam:
-        intelligence = extract_intelligence(scammer_text)
         scam_type = "upi_fraud"  # Default, can be enhanced later
         new_phase = next_phase(current_phase, message)
     else:
         new_phase = current_phase
 
-    # 4️⃣ CHECK FLAGGED INTELLIGENCE INSTANTLY
+    # 4️⃣ CHECK FLAGGED INTELLIGENCE INSTANTLY (even if not detected as scam!)
     if intelligence:
         is_flagged, flag_reason = check_flagged_intelligence(
             {
