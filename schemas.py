@@ -19,3 +19,4 @@ class ScamAnalysisResponse(BaseModel):
     risk: Optional[Dict[str, Any]] = None
     blocked: bool = False
     blocked_message: Optional[str] = None
+    flagged_match: bool = False

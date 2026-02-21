@@ -166,3 +166,14 @@ async def debug_gemini(api_key: str = Depends(verify_api_key)):
         result["error"] = f"{type(e).__name__}: {str(e)}"
     
     return result
+
+
+@app.get("/admin/flagged-intelligence")
+async def get_flagged_intelligence_stats(api_key: str = Depends(verify_api_key)):
+    """
+    Get statistics on flagged (blacklisted) intelligence.
+    This endpoint shows how many UPI IDs, bank accounts, and phishing links
+    have been flagged from previous scam conversations.
+    """
+    from storage import get_flagged_intelligence_stats
+    return get_flagged_intelligence_stats()
