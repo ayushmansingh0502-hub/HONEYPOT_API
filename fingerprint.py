@@ -9,7 +9,7 @@ def analyze_attacker(history: list, ip: str, user_agent: str) -> dict:
         any(word in m["content"].lower() for word in pressure_words)
         for m in scammer_messages
     )
-
+    
     links = any("http" in m["content"].lower() for m in scammer_messages)
 
     payment_words = ["upi", "pay", "payment", "transfer", "bank", "account", "₹"]

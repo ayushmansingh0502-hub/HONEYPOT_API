@@ -94,7 +94,7 @@ async def honeypot(
             detail="Rate limit exceeded. Please retry shortly.",
         )
 
-    # GUVI / tester may send no body -> fabricate one
+    
     if not body:
         conversation_id = "guvi-test"
         message = "test message"
