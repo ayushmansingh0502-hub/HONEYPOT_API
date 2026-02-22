@@ -9,6 +9,11 @@ const CONFIG = {
 };
 
 let debounceTimer = null;
+let lastAnalysis = null;
+let lastEmailData = null;
+let lastBannerState = { type: 'pending', message: 'Analyzing email…' };
+let observer = null;
+let observerTarget = null;
 
 /**
  * Extract email data from Gmail DOM
@@ -75,8 +80,11 @@ async function analyzeCurrentEmail() {
   
   if (!emailData || !emailData.message_text) {
     console.log("⚠️ No email content found to analyze");
+    showPendingBanner("Open an email to analyze");
     return;
   }
+
+  showPendingBanner("Analyzing email…");
   
   console.log("📧 Analyzing email from:", emailData.from_email, "Subject:", emailData.subject);
   console.log("📝 Message length:", emailData.message_text.length, "Links found:", emailData.links.length);
@@ -105,28 +113,15 @@ async function analyzeCurrentEmail() {
  */
 function showAnalysisResult(analysis, emailData) {
   console.log("📊 Displaying analysis:", analysis);
+
+  lastAnalysis = analysis;
+  lastEmailData = emailData;
+  lastBannerState = { type: 'analysis', analysis };
   
   // Create banner
   const banner = createAnalysisBanner(analysis);
   
-  // Find Gmail's email container and inject banner
-  const emailContainer = document.querySelector('[data-thread-id]');
-  if (emailContainer) {
-    // Insert at the top of the thread
-    const existingBanner = emailContainer.querySelector('.scam-shield-banner');
-    if (existingBanner) existingBanner.remove();
-    emailContainer.insertBefore(banner, emailContainer.firstChild);
-    console.log("✅ Banner inserted in thread container");
-  } else {
-    // Fallback: insert in main content area
-    const mainContent = document.querySelector('[role="main"]');
-    if (mainContent) {
-      const existingBanner = mainContent.querySelector('.scam-shield-banner');
-      if (existingBanner) existingBanner.remove();
-      mainContent.insertBefore(banner, mainContent.firstChild);
-      console.log("✅ Banner inserted in main content");
-    }
-  }
+  insertAnalysisBanner(banner);
   
   // Highlight suspicious content ONLY in email body
   if (analysis.is_scam && analysis.extracted_intelligence) {
@@ -136,6 +131,143 @@ function showAnalysisResult(analysis, emailData) {
   } else {
     console.log("✅ Email is safe, no highlighting needed");
   }
+}
+
+/**
+ * Show a pending banner while analysis runs
+ */
+function showPendingBanner(message) {
+  lastBannerState = { type: 'pending', message: message || 'Analyzing email…' };
+  const banner = createStatusBanner({
+    title: 'Scanning',
+    message: lastBannerState.message,
+    icon: '⏳',
+    color: '#6a4',
+    bgColor: '#f2f7ef',
+    borderColor: '#6a4'
+  });
+  insertAnalysisBanner(banner);
+}
+
+/**
+ * Insert banner into Gmail thread or main content
+ */
+function insertAnalysisBanner(banner) {
+  const emailContainer = document.querySelector('[data-thread-id]');
+  if (emailContainer) {
+    const existingBanner = emailContainer.querySelector('.scam-shield-banner');
+    if (existingBanner) existingBanner.remove();
+    emailContainer.insertBefore(banner, emailContainer.firstChild);
+    console.log("✅ Banner inserted in thread container");
+    return;
+  }
+
+  const mainContent = document.querySelector('[role="main"]');
+  if (mainContent) {
+    const existingBanner = mainContent.querySelector('.scam-shield-banner');
+    if (existingBanner) existingBanner.remove();
+    mainContent.insertBefore(banner, mainContent.firstChild);
+    console.log("✅ Banner inserted in main content");
+    return;
+  }
+
+  const fixedHost = getOrCreateFixedBannerHost();
+  const existingBanner = fixedHost.querySelector('.scam-shield-banner');
+  if (existingBanner) existingBanner.remove();
+  fixedHost.prepend(banner);
+  console.log("✅ Banner inserted in fixed host");
+}
+
+/**
+ * Ensure banner stays visible when Gmail re-renders the DOM
+ */
+function ensureBannerVisible() {
+  const hasBanner = document.querySelector('.scam-shield-banner');
+  if (hasBanner) return;
+
+  const banner = renderBannerFromState();
+  if (banner) insertAnalysisBanner(banner);
+}
+
+/**
+ * Render the banner based on the last known state
+ */
+function renderBannerFromState() {
+  if (lastBannerState.type === 'analysis' && lastBannerState.analysis) {
+    return createAnalysisBanner(lastBannerState.analysis);
+  }
+
+  if (lastBannerState.type === 'error') {
+    return createStatusBanner({
+      title: 'Analysis unavailable',
+      message: lastBannerState.message || 'Unknown error',
+      icon: '⚠️',
+      color: '#b67c00',
+      bgColor: '#fef3cd',
+      borderColor: '#ffc107'
+    });
+  }
+
+  return createStatusBanner({
+    title: 'Scanning',
+    message: lastBannerState.message || 'Analyzing email…',
+    icon: '⏳',
+    color: '#6a4',
+    bgColor: '#f2f7ef',
+    borderColor: '#6a4'
+  });
+}
+
+/**
+ * Create a simple status banner
+ */
+function createStatusBanner({ title, message, icon, color, bgColor, borderColor }) {
+  const banner = document.createElement('div');
+  banner.className = 'scam-shield-banner';
+  banner.innerHTML = `
+    <div style="
+      background: ${bgColor};
+      border-left: 4px solid ${borderColor};
+      padding: 12px 16px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+    ">
+      <div style="display: flex; gap: 8px; align-items: flex-start;">
+        <span style="font-size: 18px; flex-shrink: 0;">${icon}</span>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: ${color}; margin-bottom: 4px;">
+            ${title}
+          </div>
+          <div style="color: #555; font-size: 12px;">
+            ${message}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  return banner;
+}
+
+function getOrCreateFixedBannerHost() {
+  let host = document.getElementById('scam-shield-fixed-host');
+  if (host) return host;
+
+  host = document.createElement('div');
+  host.id = 'scam-shield-fixed-host';
+  host.style.position = 'fixed';
+  host.style.top = '8px';
+  host.style.left = '50%';
+  host.style.transform = 'translateX(-50%)';
+  host.style.zIndex = '2147483647';
+  host.style.maxWidth = '780px';
+  host.style.width = 'calc(100% - 24px)';
+  host.style.pointerEvents = 'auto';
+
+  document.body.appendChild(host);
+  return host;
 }
 
 /**
@@ -346,36 +478,9 @@ function highlightText(texts, bgColor, textColor, container) {
  * Show error message
  */
 function showError(errorMsg) {
-  const banner = document.createElement('div');
-  banner.className = 'scam-shield-error';
-  banner.innerHTML = `
-    <div style="
-      background: #fef3cd;
-      border-left: 4px solid #ffc107;
-      padding: 12px 16px;
-      margin: 8px 0;
-      border-radius: 4px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 13px;
-    ">
-      ⚠️ Analysis unavailable: ${errorMsg}
-    </div>
-  `;
-  
-  // Insert in thread container or main content
-  const emailContainer = document.querySelector('[data-thread-id]');
-  if (emailContainer) {
-    const existingBanner = emailContainer.querySelector('.scam-shield-error');
-    if (existingBanner) existingBanner.remove();
-    emailContainer.insertBefore(banner, emailContainer.firstChild);
-  } else {
-    const mainContent = document.querySelector('[role="main"]');
-    if (mainContent) {
-      const existingBanner = mainContent.querySelector('.scam-shield-error');
-      if (existingBanner) existingBanner.remove();
-      mainContent.insertBefore(banner, mainContent.firstChild);
-    }
-  }
+  lastBannerState = { type: 'error', message: errorMsg || 'Unknown error' };
+  const banner = renderBannerFromState();
+  if (banner) insertAnalysisBanner(banner);
 }
 
 /**
@@ -390,23 +495,39 @@ function debouncedAnalyze() {
  * Monitor Gmail for new emails
  */
 function setupObservers() {
-  // Watch for email thread changes
-  const observer = new MutationObserver(() => {
-    if (CONFIG.autoAnalyze) {
-      debouncedAnalyze();
-    }
-  });
-  
-  // Observe the main content area for changes
-  const mainContent = document.querySelector('[data-view-name="MAIN"]');
-  if (mainContent) {
-    observer.observe(mainContent, {
-      childList: true,
-      subtree: true,
-      characterData: true
+  if (!observer) {
+    observer = new MutationObserver(() => {
+      if (CONFIG.autoAnalyze) {
+        debouncedAnalyze();
+      }
+
+      ensureBannerVisible();
+      attachObserver();
     });
-    console.log("✅ Gmail observer attached");
   }
+
+  attachObserver();
+
+  // Retry attachment while Gmail hydrates
+  setInterval(attachObserver, 2000);
+}
+
+function attachObserver() {
+  const target =
+    document.querySelector('[data-view-name="MAIN"]') ||
+    document.querySelector('[role="main"]') ||
+    document.body;
+
+  if (!target || target === observerTarget || !observer) return;
+
+  if (observerTarget) observer.disconnect();
+  observer.observe(target, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
+  observerTarget = target;
+  console.log("✅ Gmail observer attached");
 }
 
 // Initialize when DOM is ready
@@ -415,6 +536,16 @@ if (document.readyState === 'loading') {
 } else {
   setupObservers();
 }
+
+// Show a banner immediately on load
+showPendingBanner('Analyzing email…');
+
+// Kick off an initial analysis
+setTimeout(() => {
+  if (CONFIG.autoAnalyze) {
+    debouncedAnalyze();
+  }
+}, 500);
 
 // Also analyze when user clicks on an email
 document.addEventListener('click', (e) => {
