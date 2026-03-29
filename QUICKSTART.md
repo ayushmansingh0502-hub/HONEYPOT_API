@@ -11,7 +11,7 @@
 1. Go to https://aistudio.google.com/apikey
 2. Sign in with Google
 3. Click "Create API Key"
-4. Copy the key (starts with `AIza...`)
+4. Copy your Google AI Studio API key
 
 ### Upstash Redis URL (FREE)
 1. Go to https://console.upstash.com/
@@ -27,7 +27,7 @@
 cp .env.example .env
 
 # Edit .env and paste your keys:
-# GOOGLE_AI_STUDIO_KEY=AIza...
+# GOOGLE_AI_STUDIO_KEY=YOUR_GOOGLE_AI_STUDIO_KEY_HERE
 # REDIS_URL=redis://...
 
 # Install dependencies
@@ -53,7 +53,7 @@ python test_local.py
 
 6. Scroll to "Environment" and add variables:
    ```
-   GOOGLE_AI_STUDIO_KEY=AIza...
+   GOOGLE_AI_STUDIO_KEY=YOUR_GOOGLE_AI_STUDIO_KEY_HERE
    REDIS_URL=redis://...
    API_KEY=hackathon-secret-key
    ```

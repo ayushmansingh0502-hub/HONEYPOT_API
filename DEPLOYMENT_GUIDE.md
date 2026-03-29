@@ -56,7 +56,7 @@ Response sent back to scammer
 2. Sign in with your Google account
 3. Click blue "Create API Key" button
 4. Select your project (or create new)
-5. Copy the key from popup (starts with `AIza...`)
+5. Copy your key from popup
 
 **Limits:**
 - 250 free requests per day
@@ -120,7 +120,7 @@ cp .env.example .env
 
 # 5. Edit .env with your keys
 # Open .env in your editor and replace:
-# GOOGLE_AI_STUDIO_KEY=AIza... (paste your Google key)
+# GOOGLE_AI_STUDIO_KEY=YOUR_GOOGLE_AI_STUDIO_KEY_HERE
 # REDIS_URL=redis://... (paste your Upstash Redis URL)
 ```
 
@@ -215,7 +215,7 @@ git push origin main
 
 Click "Environment" section:
 ```
-GOOGLE_AI_STUDIO_KEY = AIza...your-key...
+GOOGLE_AI_STUDIO_KEY = YOUR_GOOGLE_AI_STUDIO_KEY_HERE
 REDIS_URL = redis://default:password@host.upstash.io:port
 API_KEY = hackathon-secret-key
 ```
@@ -382,7 +382,7 @@ pydantic==2.5.0
 1. Render Dashboard → Your Service
 2. Settings → Environment
 3. Check if variable exists
-4. If not, add: `GOOGLE_AI_STUDIO_KEY = AIza...`
+4. If not, add: `GOOGLE_AI_STUDIO_KEY = YOUR_GOOGLE_AI_STUDIO_KEY_HERE`
 5. Redeploy service
 
 ### Problem: "Redis connection refused"
@@ -413,7 +413,7 @@ pydantic==2.5.0
 
 **Fix:**
 1. Go to https://aistudio.google.com/apikey
-2. Verify key starts with `AIza...`
+2. Verify key is set in your environment
 3. Create new key if needed
 4. Update in Render Environment
 5. Redeploy
@@ -540,7 +540,7 @@ Check that:
 - .env file exists locally with real keys
 - Render environment variables match .env
 - redis:// URL has correct format
-- API key starts with AIza...
+- API key is present and non-empty
 
 ---
 

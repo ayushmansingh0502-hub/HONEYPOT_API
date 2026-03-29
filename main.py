@@ -136,7 +136,7 @@ async def debug_gemini(api_key: str = Depends(verify_api_key)):
     import google.generativeai as genai
     
     # Check API key
-    api_key_value = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
+    api_key_value = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
     
     result = {
         "api_key_present": bool(api_key_value),

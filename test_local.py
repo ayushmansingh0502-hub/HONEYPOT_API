@@ -49,7 +49,7 @@ def test_environment():
     
     env_ok = True
     
-    if api_key and api_key != "AIza...":
+    if api_key:
         print_status("GOOGLE_AI_STUDIO_KEY", True, f"Key set ({api_key[:10]}...)")
     else:
         print_status("GOOGLE_AI_STUDIO_KEY", False, "Not set or placeholder")

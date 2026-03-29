@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
+API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
 
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('models/gemma-3-4b-it')

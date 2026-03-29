@@ -9,7 +9,7 @@ from lifecycle import ScamPhase
 logger = logging.getLogger("honeypot.ai")
 
 # Configure Gemini API
-API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIzaSyDZSLIE_x0Zt74tgMWpXjuaz2yJGl-w5v4")
+API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
 
 logger.info(f"🔑 API Key loaded: {'✅ YES' if API_KEY else '❌ NO'} (length: {len(API_KEY) if API_KEY else 0})")
 

@@ -65,7 +65,7 @@ reply = model.generate_content(prompt).text
 ```python
 import google.generativeai as genai
 
-API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "AIza...")
+API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
@@ -163,7 +163,7 @@ google-generativeai==0.8.3
 
 **Contents:**
 ```
-GOOGLE_AI_STUDIO_KEY=AIza...
+GOOGLE_AI_STUDIO_KEY=YOUR_GOOGLE_AI_STUDIO_KEY_HERE
 REDIS_URL=redis://...
 API_KEY=hackathon-secret-key
 ```
