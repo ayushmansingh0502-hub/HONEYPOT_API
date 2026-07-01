@@ -5,7 +5,9 @@ console.log("📋 Popup initialized");
 document.addEventListener('DOMContentLoaded', () => {
   loadFlaggedStats();
   loadSettings();
+  loadApiSettings();
   setupToggleButtons();
+  setupApiSettings();
 });
 
 /**
@@ -40,6 +42,46 @@ function loadSettings() {
     
     setToggleState('toggle-auto-analyze', autoAnalyze);
     setToggleState('toggle-highlight', highlight);
+  });
+}
+
+function loadApiSettings() {
+  chrome.storage.sync.get(['apiBase', 'apiKey'], (items) => {
+    const baseInput = document.getElementById('api-base');
+    const keyInput = document.getElementById('api-key');
+    if (baseInput) baseInput.value = items.apiBase || 'https://web-production-b7ac.up.railway.app';
+    if (keyInput) keyInput.value = items.apiKey || '';
+  });
+}
+
+function setupApiSettings() {
+  const saveButton = document.getElementById('save-api-settings');
+  if (!saveButton) return;
+
+  saveButton.addEventListener('click', () => {
+    const apiBase = (document.getElementById('api-base')?.value || '').trim();
+    const apiKey = (document.getElementById('api-key')?.value || '').trim();
+    const status = document.getElementById('api-save-status');
+
+    if (!apiBase || !apiKey) {
+      if (status) {
+        status.style.display = 'block';
+        status.className = 'alert alert-error';
+        status.textContent = 'Both API base and API key are required';
+      }
+      return;
+    }
+
+    chrome.storage.sync.set({ apiBase, apiKey }, () => {
+      if (status) {
+        status.style.display = 'block';
+        status.className = 'alert alert-success';
+        status.textContent = 'Settings saved';
+      }
+      setTimeout(() => {
+        if (status) status.style.display = 'none';
+      }, 2000);
+    });
   });
 }
 
