@@ -1,5 +1,6 @@
 import storage
 from demo.run_scenarios import run_all_scenarios
+import asyncio
 
 
 def setup_function():
@@ -8,7 +9,7 @@ def setup_function():
 
 
 def test_demo_runner_generates_metrics_and_audits():
-    summary = run_all_scenarios()
+    summary = asyncio.run(run_all_scenarios())
 
     assert summary["scenario_count"] == 4
     assert summary["detection_rate"] >= 0.66
