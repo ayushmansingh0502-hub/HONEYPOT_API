@@ -1,29 +1,36 @@
-# ai_honeypot.py - UPDATED WITH GOOGLE AI STUDIO
-import google.generativeai as genai
+"""ai_honeypot.py - LLM-backed honeypot reply generator with safe fallback.
+
+This module uses Google AI Studio when available; otherwise falls back to
+the existing rule-based reply generator so the service can run without
+the external SDK installed.
+"""
 import os
 import logging
+import importlib
 from typing import List, Dict
 from lifecycle import ScamPhase
 
 # Setup logging
 logger = logging.getLogger("honeypot.ai")
 
-# Configure Gemini API
+# Lazy/optional import of Google AI Studio
 API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
-
-logger.info(f"🔑 API Key loaded: {'✅ YES' if API_KEY else '❌ NO'} (length: {len(API_KEY) if API_KEY else 0})")
-
+genai = None
+model = None
 if API_KEY:
     try:
+        genai = importlib.import_module("google.generativeai")
         genai.configure(api_key=API_KEY)
-        model = genai.GenerativeModel('models/gemma-3-4b-it')
-        logger.info("✅ Gemma model initialized successfully (gemma-3-4b-it)")
-    except Exception as e:
-        logger.error(f"❌ Model initialization failed: {e}")
+        try:
+            model = genai.GenerativeModel('models/gemma-3-4b-it')
+            logger.info("✅ Gemma model initialized successfully (gemma-3-4b-it)")
+        except Exception as e:
+            logger.error(f"❌ Model initialization failed: {e}")
+            model = None
+    except Exception:
+        genai = None
         model = None
-else:
-    model = None
-    logger.warning("⚠️ GOOGLE_AI_STUDIO_KEY not set. Using rule-based replies.")
+        logger.warning("⚠️ google.generativeai not available. Using rule-based replies.")
 
 
 def generate_honeypot_reply(
