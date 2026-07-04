@@ -1,23 +1,28 @@
 # intelligence.py - UPDATED WITH GOOGLE AI STUDIO
-import google.generativeai as genai
 import json
 import os
 import re
+import importlib
 from typing import NamedTuple
 from schemas import ExtractedIntelligence
 
-# Configure Gemini API (set GOOGLE_AI_STUDIO_KEY environment variable)
+# Lazy/optional import of Google AI Studio to allow running without the SDK
 API_KEY = os.getenv("GOOGLE_AI_STUDIO_KEY", "")
+genai = None
+model = None
 if API_KEY:
-    genai.configure(api_key=API_KEY)
     try:
-        model = genai.GenerativeModel('models/gemma-3-4b-it')
-    except Exception as e:
-        print(f"⚠️ WARNING: Model initialization failed: {e}. Will use fallback.")
+        genai = importlib.import_module("google.generativeai")
+        genai.configure(api_key=API_KEY)
+        try:
+            model = genai.GenerativeModel('models/gemma-3-4b-it')
+        except Exception as e:
+            print(f"⚠️ WARNING: Model initialization failed: {e}. Will use fallback.")
+            model = None
+    except Exception:
+        genai = None
         model = None
-else:
-    model = None
-    print("⚠️ WARNING: GOOGLE_AI_STUDIO_KEY not set. Using fallback detection.")
+        print("⚠️ WARNING: google.generativeai not available. Using fallback detection.")
 
 
 class DetectionResult(NamedTuple):
